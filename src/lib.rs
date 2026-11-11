@@ -4,3 +4,4 @@
 //! measures every latency from the moment a request was *meant* to start. That avoids
 //! coordinated omission: a server that stalls cannot hide the requests it delayed.
 //! The crate uses only the standard library.
+pub mod hist;
