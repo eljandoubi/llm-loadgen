@@ -7,5 +7,6 @@
 
 pub mod arrival;
 pub mod hist;
+pub mod json;
 pub mod rng;
 pub mod sse;
