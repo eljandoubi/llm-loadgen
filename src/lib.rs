@@ -5,5 +5,6 @@
 //! coordinated omission: a server that stalls cannot hide the requests it delayed.
 //! The crate uses only the standard library.
 
+pub mod arrival;
 pub mod hist;
 pub mod rng;
