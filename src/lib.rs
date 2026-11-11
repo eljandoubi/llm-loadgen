@@ -8,3 +8,4 @@
 pub mod arrival;
 pub mod hist;
 pub mod rng;
+pub mod sse;
