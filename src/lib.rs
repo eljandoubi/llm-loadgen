@@ -6,6 +6,7 @@
 //! The crate uses only the standard library.
 
 pub mod arrival;
+pub mod client;
 pub mod hist;
 pub mod http;
 pub mod json;
