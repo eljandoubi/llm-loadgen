@@ -9,5 +9,6 @@ pub mod arrival;
 pub mod hist;
 pub mod http;
 pub mod json;
+pub mod mock;
 pub mod rng;
 pub mod sse;
