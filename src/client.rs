@@ -304,6 +304,7 @@ mod tests {
         let server = mock(5, 1);
         let intended = Instant::now() + Duration::from_secs(30);
         let sample = run_one(&spec_for(&server.url()), intended);
+        assert_eq!(sample.outcome, Outcome::Ok, "{sample:?}");
         assert_eq!(sample.lag, Duration::ZERO);
         assert_eq!(sample.ttft, Some(Duration::ZERO));
         assert_eq!(sample.outcome, Outcome::Ok);
