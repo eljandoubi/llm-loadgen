@@ -88,6 +88,9 @@ pub struct Report {
     pub offered: u64,
     /// Length of the measured window.
     pub window: Duration,
+    /// From the start of the window to the last answer to a request meant to start in it. Longer
+    /// than the window when the server was still working through a backlog afterwards.
+    pub span: Duration,
     pub stats: Stats,
 }
 
@@ -100,11 +103,11 @@ fn ms(micros: u64) -> f64 {
 impl Report {
     /// Successful requests per second of the measured window.
     pub fn rate(&self) -> f64 {
-        self.stats.ok as f64 / self.window.as_secs_f64()
+        self.stats.ok as f64 / self.span.as_secs_f64()
     }
 
     pub fn tokens_per_s(&self) -> f64 {
-        self.stats.tokens as f64 / self.window.as_secs_f64()
+        self.stats.tokens as f64 / self.span.as_secs_f64()
     }
 
     fn row(name: &str, h: &Histogram) -> String {
@@ -144,7 +147,16 @@ impl Report {
         if let Some(target) = self.target_rate {
             let _ = write!(out, "   (target {target:.1} req/s)");
         }
-        out.push_str("\n\n");
+        out.push('\n');
+        if self.span.as_secs_f64() > self.window.as_secs_f64() * 1.1 {
+            let _ = writeln!(
+                out,
+                "            the server needed {:.1} s, not {:.1} s, to answer them: it was behind",
+                self.span.as_secs_f64(),
+                self.window.as_secs_f64()
+            );
+        }
+        out.push('\n');
         let _ = write!(out, "{:<11}", "latency ms");
         for (name, _) in PERCENTILES {
             let _ = write!(out, "{name:>10}");
@@ -199,6 +211,7 @@ impl Report {
                 self.target_rate.map_or(Value::Null, Into::into),
             ),
             ("window_s", self.window.as_secs_f64().into()),
+            ("span_s", self.span.as_secs_f64().into()),
             ("offered", self.offered.into()),
             ("ok", s.ok.into()),
             ("failed", s.failed().into()),
@@ -313,6 +326,7 @@ mod tests {
             target_rate: Some(10.0),
             offered: 20,
             window: Duration::from_secs(2),
+            span: Duration::from_secs(2),
             stats,
         }
     }
@@ -326,6 +340,22 @@ mod tests {
         let r = report(stats);
         assert!((r.rate() - 10.0).abs() < 1e-9);
         assert!((r.tokens_per_s() - 30.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_server_that_was_behind_is_judged_over_the_time_it_took() {
+        let mut stats = Stats::default();
+        for _ in 0..20 {
+            stats.record(&good(100));
+        }
+        let mut r = report(stats);
+        assert!(!r.text().contains("it was behind"));
+        r.span = Duration::from_secs(4);
+        assert!((r.rate() - 5.0).abs() < 1e-9, "20 answers in 4 s");
+        assert!(r
+            .text()
+            .contains("the server needed 4.0 s, not 2.0 s, to answer them: it was behind"));
+        assert_eq!(r.json().get("span_s").and_then(Value::as_f64), Some(4.0));
     }
 
     #[test]
