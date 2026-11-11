@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install stable --profile minimal -c rustfmt,clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install stable --profile minimal
+      - run: cargo test
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install 1.80 --profile minimal
+      - run: cargo +1.80 build --all-targets
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t llm-loadgen .
+      - name: run the generator against the mock in a second container
+        run: |
+          docker network create lg
+          docker run -d --name mock --network lg llm-loadgen mock --host 0.0.0.0 --port 8000
+          sleep 1
+          docker run --rm --network lg llm-loadgen run \
+            --url http://mock:8000/v1/chat/completions \
+            --rate 20 --arrival constant --duration 2 --warmup 0 --max-tokens 8 | tee out.txt
+          grep -q "offered 40  ok 40  failed 0" out.txt
+          test "$(docker inspect --format '{{.Config.User}}' llm-loadgen)" = nonroot
