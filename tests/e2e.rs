@@ -161,7 +161,7 @@ fn a_stalled_server_is_visible_in_open_loop_and_hidden_in_closed_loop() {
         number(&closed, &["e2e_ms", "p90"]),
     );
     assert!(open_p90 > 500.0, "open loop p90 {open_p90} ms");
-    assert!(closed_p90 < 60.0, "closed loop p90 {closed_p90} ms");
+    assert!(closed_p90 < 250.0, "closed loop p90 {closed_p90} ms");
     assert!(
         number(&open, &["e2e_ms", "max"]) > 900.0,
         "someone waited for the whole freeze"

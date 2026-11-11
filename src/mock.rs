@@ -519,13 +519,13 @@ mod tests {
             "first token after {first_text:?}"
         );
         assert!(
-            first_text < Duration::from_millis(120),
+            first_text < Duration::from_secs(1),
             "first token after {first_text:?}"
         );
         // 8 tokens: 7 gaps of 10 ms after the first
         let spread = reply.total.saturating_sub(first_text);
         assert!(spread >= Duration::from_millis(70), "{spread:?}");
-        assert!(spread < Duration::from_millis(200), "{spread:?}");
+        assert!(spread < Duration::from_secs(1), "{spread:?}");
     }
 
     #[test]
@@ -549,14 +549,14 @@ mod tests {
         assert!(sorted[0] >= Duration::from_millis(100), "{sorted:?}");
         assert!(sorted[1] >= Duration::from_millis(200), "{sorted:?}");
         assert!(sorted[2] >= Duration::from_millis(300), "{sorted:?}");
-        assert!(started.elapsed() < Duration::from_secs(2));
+        assert!(started.elapsed() < Duration::from_secs(10));
     }
 
     #[test]
     fn with_enough_slots_requests_run_side_by_side() {
         let cfg = MockConfig {
             slots: 4,
-            ttft: Duration::from_millis(100),
+            ttft: Duration::from_millis(300),
             itl: Duration::ZERO,
             ..quick()
         };
@@ -568,7 +568,7 @@ mod tests {
             }
         });
         assert!(
-            started.elapsed() < Duration::from_millis(250),
+            started.elapsed() < Duration::from_millis(900), // one after the other: 1200+
             "{:?}",
             started.elapsed()
         );

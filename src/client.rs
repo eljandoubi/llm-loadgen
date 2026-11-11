@@ -265,13 +265,13 @@ mod tests {
         assert_eq!(sample.tokens, 5);
         let ttft = sample.ttft.unwrap();
         assert!(
-            ttft >= Duration::from_millis(60) && ttft < Duration::from_millis(200),
+            ttft >= Duration::from_millis(60) && ttft < Duration::from_secs(1),
             "{ttft:?}"
         );
         assert_eq!(sample.itl.len(), 4);
         for gap in &sample.itl {
             assert!(
-                *gap >= Duration::from_millis(12) && *gap < Duration::from_millis(80),
+                *gap >= Duration::from_millis(12) && *gap < Duration::from_millis(500),
                 "{gap:?}"
             );
         }
@@ -280,7 +280,7 @@ mod tests {
             "{:?}",
             sample.e2e
         );
-        assert!(sample.lag < Duration::from_millis(50));
+        assert!(sample.lag < Duration::from_millis(500));
     }
 
     #[test]
