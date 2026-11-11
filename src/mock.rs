@@ -173,7 +173,8 @@ fn accept_loop(listener: &TcpListener, shared: &Arc<Shared>) {
             Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
                 thread::sleep(Duration::from_millis(2));
             }
-            Err(_) => break,
+            // transient: a connection aborted before we took it, or no descriptors left
+            Err(_) => thread::sleep(Duration::from_millis(10)),
         }
     }
 }
@@ -238,6 +239,8 @@ fn error_body(message: &str) -> String {
 }
 
 fn handle(mut stream: TcpStream, shared: &Shared) -> io::Result<()> {
+    // the listener is non-blocking and on BSD and macOS an accepted socket inherits that
+    stream.set_nonblocking(false)?;
     stream.set_nodelay(true)?;
     stream.set_read_timeout(Some(Duration::from_secs(10)))?;
     let request = read_request(&mut stream)?;
@@ -630,6 +633,22 @@ mod tests {
             "the client must notice"
         );
         assert_eq!(contents(&reply), vec!["", "tok0 ", "tok1 "]);
+    }
+
+    #[test]
+    fn a_client_that_is_slow_to_send_its_request_is_still_served() {
+        let server = Server::start("127.0.0.1:0", quick()).unwrap();
+        let url = parse_url(&server.url()).unwrap();
+        let mut stream = TcpStream::connect(server.addr()).unwrap();
+        thread::sleep(Duration::from_millis(150)); // the server's first read finds nothing yet
+        stream
+            .write_all(&build_post(&url, STREAM.as_bytes(), &[]))
+            .unwrap();
+        let mut response = Response::start(stream).unwrap();
+        assert_eq!(response.head.status, 200);
+        let mut body = Vec::new();
+        while response.read_body(&mut body).unwrap() {}
+        assert!(String::from_utf8_lossy(&body).contains("[DONE]"));
     }
 
     #[test]
