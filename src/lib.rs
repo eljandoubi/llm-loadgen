@@ -13,4 +13,5 @@ pub mod json;
 pub mod mock;
 pub mod report;
 pub mod rng;
+pub mod runner;
 pub mod sse;
